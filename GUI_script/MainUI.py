@@ -6,7 +6,7 @@ from BNO055_Visualizer import BNO055Visualizer
 from threading import Thread
 
 form_class, base_class = uic.loadUiType("D:\EEI\E2I_GroundSystem\RPI_GUI\MainUI.ui")
-
+#
 class WindowClass(QMainWindow, form_class):
     def __init__(self):
         super().__init__()

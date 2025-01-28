@@ -25,7 +25,7 @@ class WindowClass(QMainWindow, form_class):
 
 # Create QApplication instance
 app = QApplication(sys.argv)
-
+#
 # Show the main window
 main_window = WindowClass()
 main_window.show()

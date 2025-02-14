@@ -76,7 +76,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QWidget" name="plotWidget" native="true">
+   <widget class="QWidget" name="BNOplot" native="true">
     <property name="geometry">
      <rect>
       <x>270</x>

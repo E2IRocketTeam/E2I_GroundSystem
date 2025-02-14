@@ -76,20 +76,24 @@
      </rect>
     </property>
    </widget>
-   <widget class="QFrame" name="Sensor_Check">
+   <widget class="QWidget" name="plotWidget" native="true">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>270</x>
       <y>10</y>
-      <width>291</width>
-      <height>131</height>
+      <width>651</width>
+      <height>361</height>
      </rect>
     </property>
-    <property name="frameShape">
-     <enum>QFrame::StyledPanel</enum>
-    </property>
-    <property name="frameShadow">
-     <enum>QFrame::Raised</enum>
+   </widget>
+   <widget class="QWidget" name="widget_2" native="true">
+    <property name="geometry">
+     <rect>
+      <x>950</x>
+      <y>10</y>
+      <width>371</width>
+      <height>361</height>
+     </rect>
     </property>
    </widget>
   </widget>
@@ -99,7 +103,7 @@
      <x>0</x>
      <y>0</y>
      <width>1366</width>
-     <height>21</height>
+     <height>33</height>
     </rect>
    </property>
   </widget>

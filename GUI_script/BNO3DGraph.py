@@ -12,8 +12,8 @@ class BNO3DGraph:
         # 3D 그래프 위젯 생성
         self.gl_widget = gl.GLViewWidget(parent_widget)
         self.gl_widget.setGeometry(0, 0, 371, 361)  # BNO3D 위젯의 크기에 맞춤
-        self.gl_widget.setCameraPosition(distance=10)  # 카메라 위치 설정
-
+        self.gl_widget.setCameraPosition(distance=15)  # 카메라 위치 설정
+        self.create_thick_axis(thickness=3)
         # 3D 축 추가
         self.axis = gl.GLAxisItem()
         self.gl_widget.addItem(self.axis)
@@ -30,6 +30,28 @@ class BNO3DGraph:
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_3d_graph)
         self.timer.start(100)
+
+    def create_thick_axis(self, thickness):
+        """GLLinePlotItem을 사용하여 두꺼운 XYZ 축 생성"""
+        axis_length = 5  # 축 길이
+        color_red = (1, 0, 0, 1)  # X축 (빨강)
+        color_green = (0, 1, 0, 1)  # Y축 (초록)
+        color_blue = (0, 0, 1, 1)  # Z축 (파랑)
+
+        # X축
+        x_data = np.array([[0, 0, 0], [axis_length, 0, 0]])
+        self.x_axis = gl.GLLinePlotItem(pos=x_data, color=color_red, width=thickness)
+        self.gl_widget.addItem(self.x_axis)
+
+        # Y축
+        y_data = np.array([[0, 0, 0], [0, axis_length, 0]])
+        self.y_axis = gl.GLLinePlotItem(pos=y_data, color=color_green, width=thickness)
+        self.gl_widget.addItem(self.y_axis)
+
+        # Z축
+        z_data = np.array([[0, 0, 0], [0, 0, axis_length]])
+        self.z_axis = gl.GLLinePlotItem(pos=z_data, color=color_blue, width=thickness)
+        self.gl_widget.addItem(self.z_axis)
 
     def update_3d_graph(self, yaw=0, pitch=0, roll=0):
         """BNO 데이터를 받아 3D 그래프를 갱신"""

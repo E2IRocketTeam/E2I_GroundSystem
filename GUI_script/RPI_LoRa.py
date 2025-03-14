@@ -82,12 +82,12 @@ def parse_sensor_data(data):
     try:
         values = data.split(",")
         sensor_data = {
-            "temperature": float(values[0]),
-            "pressure": float(values[1]),
-            "altitude": float(values[2]),
-            "yaw": float(values[3]),
-            "pitch": float(values[4]),
-            "roll": float(values[5])
+            "yaw": float(values[0]),
+            "pitch": float(values[1]),
+            "roll": float(values[2]),
+            "temperature": float(values[3]),
+            "pressure": float(values[4]),
+            "altitude": float(values[5])
         }
         return sensor_data
     except (IndexError, ValueError):
@@ -105,15 +105,21 @@ def receive_lora_message():
             message = "".join(chr(spi_read(REG_FIFO)) for _ in range(length))
             print(f"Raw Data Received: {message}")
 
+            # Check for RESET command
+            if message.strip() == "RESET":
+                print("Received RESET command. Rebooting system...")
+                reset_lora()
+                return
+
             # Parse and display sensor data
             sensor_data = parse_sensor_data(message)
             if sensor_data:
-                print(f"Temperature: {sensor_data['temperature']}°C")
-                print(f"Pressure: {sensor_data['pressure']} hPa")
-                print(f"Altitude: {sensor_data['altitude']} m")
                 print(f"Yaw: {sensor_data['yaw']}°")
                 print(f"Pitch: {sensor_data['pitch']}°")
                 print(f"Roll: {sensor_data['roll']}°")
+                print(f"Temperature: {sensor_data['temperature']}°C")
+                print(f"Pressure: {sensor_data['pressure']} hPa")
+                print(f"Altitude: {sensor_data['altitude']} m")
 
 # Main execution
 if __name__ == "__main__":

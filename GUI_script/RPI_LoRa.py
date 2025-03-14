@@ -29,13 +29,6 @@ GPIO.setup(PIN_RST, GPIO.OUT)
 GPIO.setup(PIN_CS, GPIO.OUT)
 GPIO.setup(PIN_DIO0, GPIO.IN)
 
-def reset_lora():
-    """ Reset the LoRa module """
-    GPIO.output(PIN_RST, GPIO.LOW)
-    time.sleep(0.01)
-    GPIO.output(PIN_RST, GPIO.HIGH)
-    time.sleep(0.01)
-
 def spi_write(reg, value):
     """ SPI write function """
     GPIO.output(PIN_CS, GPIO.LOW)
@@ -58,10 +51,9 @@ def set_frequency():
 
 def init_lora():
     """ Initialize the LoRa module """
-    reset_lora()
     version = spi_read(REG_VERSION)
     if version != 0x12:
-        print("LoRa module not detected!")
+        print("❌ LoRa module not detected!")
         return False
 
     # Switch to sleep mode
@@ -74,7 +66,7 @@ def init_lora():
     # Set frequency to 915MHz
     set_frequency()
 
-    print("LoRa module initialized! (915MHz, Receiver mode)")
+    print("✅ LoRa module initialized! (915MHz, Receiver mode)")
     return True
 
 def parse_sensor_data(data):
@@ -82,7 +74,7 @@ def parse_sensor_data(data):
     try:
         values = data.split(",")
         if len(values) != 6:  # Expecting exactly 6 values
-            print(f"Unexpected data format! Expected 6 values, got {len(values)}")
+            print(f"⚠️ Warning: Unexpected data format! Expected 6 values, got {len(values)}")
             return None
 
         sensor_data = {
@@ -95,7 +87,7 @@ def parse_sensor_data(data):
         }
         return sensor_data
     except (IndexError, ValueError) as e:
-        print(f"Data parsing error: {e}")
+        print(f"❌ Data parsing error: {e}")
         return None
 
 def receive_lora_message():
@@ -104,8 +96,14 @@ def receive_lora_message():
     print("📡 Waiting for incoming sensor data...\n")
 
     while True:
-        if GPIO.input(PIN_DIO0) == 1:
+        if GPIO.input(PIN_DIO0) == 1:  # Check if a new packet is available
             length = spi_read(REG_FIFO)  # Read received data length
+
+            # Debugging: Print raw data length
+            if length == 0:
+                print("⚠️ Warning: Received an empty packet (Length = 0). Check transmitter.")
+                continue
+
             raw_data = [spi_read(REG_FIFO) for _ in range(length)]
             message = "".join(chr(byte) for byte in raw_data).strip()
 
@@ -113,22 +111,16 @@ def receive_lora_message():
             print(f"\n🔹 Raw Data (Length: {length}): {raw_data}")
             print(f"🔹 Decoded Message: '{message}'")
 
-            # Check for RESET command
-            if message == "RESET":
-                print("\nReceived RESET command. Rebooting system...\n")
-                reset_lora()
-                return
-
             # Parse and display sensor data
             sensor_data = parse_sensor_data(message)
             if sensor_data:
                 print("="*50)
-                print(f"Yaw: {sensor_data['yaw']}°")
-                print(f"Pitch: {sensor_data['pitch']}°")
-                print(f"Roll: {sensor_data['roll']}°")
-                print(f"Temperature: {sensor_data['temperature']}°C")
-                print(f"Pressure: {sensor_data['pressure']} hPa")
-                print(f"Altitude: {sensor_data['altitude']} m")
+                print(f"🧭 Yaw: {sensor_data['yaw']}°")
+                print(f"🎯 Pitch: {sensor_data['pitch']}°")
+                print(f"🔄 Roll: {sensor_data['roll']}°")
+                print(f"🌡 Temperature: {sensor_data['temperature']}°C")
+                print(f"🌬 Pressure: {sensor_data['pressure']} hPa")
+                print(f"🛫 Altitude: {sensor_data['altitude']} m")
                 print("="*50 + "\n")
 
 # Main execution

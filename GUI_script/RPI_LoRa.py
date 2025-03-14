@@ -54,7 +54,7 @@ def set_frequency():
     spi_write(REG_FRF_MSB, 0xE4)
     spi_write(REG_FRF_MID, 0xC0)
     spi_write(REG_FRF_LSB, 0x00)
-    print("Frequency set to 915MHz!")
+    print("✅ Frequency set to 915MHz!")
 
 def init_lora():
     """ Initialize the LoRa module """
@@ -78,9 +78,13 @@ def init_lora():
     return True
 
 def parse_sensor_data(data):
-    """ Parse CSV-formatted sensor data """
+    """ Parse CSV-formatted sensor data with error checking """
     try:
         values = data.split(",")
+        if len(values) != 6:  # Expecting exactly 6 values
+            print(f"Unexpected data format! Expected 6 values, got {len(values)}")
+            return None
+
         sensor_data = {
             "yaw": float(values[0]),
             "pitch": float(values[1]),
@@ -90,8 +94,8 @@ def parse_sensor_data(data):
             "altitude": float(values[5])
         }
         return sensor_data
-    except (IndexError, ValueError):
-        print("Invalid data format received!")
+    except (IndexError, ValueError) as e:
+        print(f"Data parsing error: {e}")
         return None
 
 def receive_lora_message():
@@ -102,10 +106,15 @@ def receive_lora_message():
     while True:
         if GPIO.input(PIN_DIO0) == 1:
             length = spi_read(REG_FIFO)  # Read received data length
-            message = "".join(chr(spi_read(REG_FIFO)) for _ in range(length))
-            
+            raw_data = [spi_read(REG_FIFO) for _ in range(length)]
+            message = "".join(chr(byte) for byte in raw_data).strip()
+
+            # Debugging: Print the received raw data
+            print(f"\n🔹 Raw Data (Length: {length}): {raw_data}")
+            print(f"🔹 Decoded Message: '{message}'")
+
             # Check for RESET command
-            if message.strip() == "RESET":
+            if message == "RESET":
                 print("\nReceived RESET command. Rebooting system...\n")
                 reset_lora()
                 return

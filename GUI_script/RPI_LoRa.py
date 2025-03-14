@@ -77,17 +77,43 @@ def init_lora():
     print("LoRa module initialized! (915MHz, Receiver mode)")
     return True
 
+def parse_sensor_data(data):
+    """ Parse CSV-formatted sensor data """
+    try:
+        values = data.split(",")
+        sensor_data = {
+            "temperature": float(values[0]),
+            "pressure": float(values[1]),
+            "altitude": float(values[2]),
+            "yaw": float(values[3]),
+            "pitch": float(values[4]),
+            "roll": float(values[5])
+        }
+        return sensor_data
+    except (IndexError, ValueError):
+        print("Invalid data format received!")
+        return None
+
 def receive_lora_message():
-    """ Receive a LoRa message """
+    """ Receive a LoRa message and parse sensor data """
     spi_write(REG_OP_MODE, MODE_RX_CONTINUOUS)
-    print("📡 Waiting for incoming message...")
+    print("Waiting for incoming sensor data...")
 
     while True:
         if GPIO.input(PIN_DIO0) == 1:
             length = spi_read(REG_FIFO)  # Read received data length
             message = "".join(chr(spi_read(REG_FIFO)) for _ in range(length))
-            print(f"Received: {message}")
-            return message
+            print(f"Raw Data Received: {message}")
+
+            # Parse and display sensor data
+            sensor_data = parse_sensor_data(message)
+            if sensor_data:
+                print(f"Temperature: {sensor_data['temperature']}°C")
+                print(f"Pressure: {sensor_data['pressure']} hPa")
+                print(f"Altitude: {sensor_data['altitude']} m")
+                print(f"Yaw: {sensor_data['yaw']}°")
+                print(f"Pitch: {sensor_data['pitch']}°")
+                print(f"Roll: {sensor_data['roll']}°")
 
 # Main execution
 if __name__ == "__main__":

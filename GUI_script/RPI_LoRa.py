@@ -95,31 +95,32 @@ def parse_sensor_data(data):
         return None
 
 def receive_lora_message():
-    """ Receive a LoRa message and parse sensor data """
+    """ Receive a LoRa message and display sensor data in CLI """
     spi_write(REG_OP_MODE, MODE_RX_CONTINUOUS)
-    print("Waiting for incoming sensor data...")
+    print("📡 Waiting for incoming sensor data...\n")
 
     while True:
         if GPIO.input(PIN_DIO0) == 1:
             length = spi_read(REG_FIFO)  # Read received data length
             message = "".join(chr(spi_read(REG_FIFO)) for _ in range(length))
-            print(f"Raw Data Received: {message}")
-
+            
             # Check for RESET command
             if message.strip() == "RESET":
-                print("Received RESET command. Rebooting system...")
+                print("\nReceived RESET command. Rebooting system...\n")
                 reset_lora()
                 return
 
             # Parse and display sensor data
             sensor_data = parse_sensor_data(message)
             if sensor_data:
+                print("="*50)
                 print(f"Yaw: {sensor_data['yaw']}°")
                 print(f"Pitch: {sensor_data['pitch']}°")
                 print(f"Roll: {sensor_data['roll']}°")
                 print(f"Temperature: {sensor_data['temperature']}°C")
                 print(f"Pressure: {sensor_data['pressure']} hPa")
                 print(f"Altitude: {sensor_data['altitude']} m")
+                print("="*50 + "\n")
 
 # Main execution
 if __name__ == "__main__":

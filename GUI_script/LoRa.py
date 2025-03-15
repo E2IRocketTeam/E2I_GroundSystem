@@ -1,28 +1,43 @@
-import board
-import busio
-import digitalio
-import adafruit_rfm9x
+import time
+from LoRa import LoRa
+from SX127x.board_config import BOARD
+from SX127x.constants import LoRaConstants
 
-# SPI 인터페이스 설정
-spi = busio.SPI(board.SCK, MOSI=board.MOSI, MISO=board.MISO)
+# 라즈베리파이 SPI 설정 초기화
+BOARD.setup()
 
-# RFM95W 핀 설정
-cs = digitalio.DigitalInOut(board.CE0)  # GPIO8
-reset = digitalio.DigitalInOut(board.D25)  # GPIO25
+class LoRaReceiver(LoRa):
+    def __init__(self, verbose=False):
+        super(LoRaReceiver, self).__init__(verbose)
+        self.set_mode(LoRaConstants.MODE.SLEEP)
+        self.set_dio_mapping([0] * 6)
+        self.set_freq(915.0)  # LoRa 주파수 설정 (915MHz)
+        self.set_spreading_factor(7)  # 확산 인자 (SF7)
+        self.set_bandwidth(LoRaConstants.BW.BW125)  # 대역폭 125kHz
+        self.set_coding_rate(LoRaConstants.CR.CR4_5)  # 부호화율 4/5
+        self.set_preamble(8)  # 프리앰블 길이
+        self.set_sync_word(0x12)  # 동기화 워드 설정
+        self.set_rx_crc(True)  # CRC 사용
 
-# RFM95W 모듈 초기화
+    def on_rx_done(self):
+        """ 패킷 수신 이벤트 핸들러 """
+        self.clear_irq_flags(LoRaConstants.IRQ_RXDONE)
+        payload = self.read_payload(nocheck=True)
+        received_data = bytes(payload).decode('utf-8', 'ignore')
+        rssi = self.get_pkt_rssi_value()
+        print(f"data: {received_data} | 신호 강도 (RSSI): {rssi} dBm")
+        self.set_mode(LoRaConstants.MODE.RXCONT)  # 계속 수신 모드로 설정
+
+# 수신기 실행
+receiver = LoRaReceiver(verbose=False)
+receiver.set_mode(LoRaConstants.MODE.RXCONT)  # 수신 모드 설정
+
 try:
-    rfm9x = adafruit_rfm9x.RFM9x(spi, cs, reset, 915.0)  # 주파수 915MHz
-    rfm9x.tx_power = 23  # 송신 전력 설정 (최대 23dBm)
-    print("LoRa 수신기 시작...")
-except Exception as e:
-    print(f"LoRa 모듈 초기화 실패: {e}")
-    exit()
-
-# 수신 루프
-while True:
-    packet = rfm9x.receive()  # 패킷 수신
-    if packet is not None:
-        received_text = str(packet, "utf-8")
-        rssi = rfm9x.rssi
-        print(f"수신된 데이터: {received_text} | 신호 강도 (RSSI): {rssi} dBm")
+    print("LoRa start...")
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("\n종료 중...")
+    receiver.set_mode(LoRaConstants.MODE.SLEEP)
+    BOARD.teardown()
+    print("LoRa 종료 완료")

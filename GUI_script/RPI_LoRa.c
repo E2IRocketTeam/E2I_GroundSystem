@@ -17,10 +17,14 @@
 #define REG_FRF_LSB 0x08
 #define REG_IRQ_FLAGS 0x12
 
-// 915 MHz Frequency Settings (Default: 0xE4C000)
+// Frequency Settings (915 MHz and 868 MHz options)
 #define FREQ_915_MHZ_MSB 0xE4
 #define FREQ_915_MHZ_MID 0xC0
 #define FREQ_915_MHZ_LSB 0x00
+
+#define FREQ_868_MHZ_MSB 0xD9
+#define FREQ_868_MHZ_MID 0x00
+#define FREQ_868_MHZ_LSB 0x00
 
 void rfm95w_write_register(uint8_t reg, uint8_t value) {
     uint8_t data[2] = { reg | 0x80, value }; // Write mode (MSB 1)
@@ -45,11 +49,9 @@ void rfm95w_reset() {
 }
 
 void rfm95w_init() {
-    // Reset the module
     rfm95w_reset();
     delay(100);
 
-    // Read Version Register (should return 0x12)
     uint8_t version = rfm95w_read_register(REG_VERSION);
     if (version == 0x12) {
         printf("✅ LoRa Module detected: SX1276 (RFM95W) Version: 0x%X\n", version);
@@ -58,16 +60,15 @@ void rfm95w_init() {
         return;
     }
 
-    // Set Frequency to 915MHz
+    // Set Frequency to 915MHz (Change to FREQ_868_MHZ_* for 868MHz)
     rfm95w_write_register(REG_FRF_MSB, FREQ_915_MHZ_MSB);
     rfm95w_write_register(REG_FRF_MID, FREQ_915_MHZ_MID);
     rfm95w_write_register(REG_FRF_LSB, FREQ_915_MHZ_LSB);
 
-    // Verify Frequency Setting
     uint8_t frf_msb = rfm95w_read_register(REG_FRF_MSB);
     uint8_t frf_mid = rfm95w_read_register(REG_FRF_MID);
     uint8_t frf_lsb = rfm95w_read_register(REG_FRF_LSB);
-    printf("📡 LoRa Frequency Set: %02X %02X %02X (Expected: E4 C0 00)\n", frf_msb, frf_mid, frf_lsb);
+    printf("📡 LoRa Frequency Set: %02X %02X %02X (Expected: E4 C0 00 for 915MHz)\n", frf_msb, frf_mid, frf_lsb);
 }
 
 int main() {

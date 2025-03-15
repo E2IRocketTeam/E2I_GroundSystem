@@ -2,15 +2,18 @@ import spidev
 import RPi.GPIO as GPIO
 import time
 
-# 핀 설정
-LORA_RST = 25  # LoRa 모듈 리셋 핀 (GPIO25)
-LORA_CS = 8    # LoRa 모듈 CS 핀 (GPIO8)
-LORA_IRQ = 4   # LoRa 모듈 IRQ 핀 (GPIO4)
+# 📡 LoRa 모듈 핀 설정
+LORA_RST = 25  # LoRa 리셋 핀 (GPIO25)
+LORA_CS = 8    # LoRa 칩 선택 핀 (GPIO8)
+LORA_IRQ = 4   # LoRa 수신 인터럽트 핀 (GPIO4)
+
+# LoRa 주파수 (아두이노 송신기와 동일해야 함)
+LORA_FREQ = 915.0  
 
 # SPI 인터페이스 설정
 spi = spidev.SpiDev()
 spi.open(0, 0)  # SPI 버스 0, 장치 0 (CE0)
-spi.max_speed_hz = 5000000  # 5MHz
+spi.max_speed_hz = 5000000  # 최대 속도 5MHz
 
 # GPIO 설정
 GPIO.setmode(GPIO.BCM)
@@ -25,14 +28,14 @@ def reset_lora():
     GPIO.output(LORA_RST, GPIO.HIGH)
     time.sleep(0.01)
 
-# SPI를 통해 SX127x 레지스터 읽기
+# SPI를 통해 SX127x 레지스터 읽기 함수
 def spi_read(register):
     GPIO.output(LORA_CS, GPIO.LOW)
-    response = spi.xfer2([register & 0x7F, 0x00])
+    response = spi.xfer2([register & 0x7F, 0x00])  # 첫 바이트는 읽기, 두 번째는 응답값 받기
     GPIO.output(LORA_CS, GPIO.HIGH)
     return response[1]
 
-# SPI를 통해 SX127x 레지스터 쓰기
+# SPI를 통해 SX127x 레지스터 쓰기 함수
 def spi_write(register, value):
     GPIO.output(LORA_CS, GPIO.LOW)
     spi.xfer2([register | 0x80, value])
@@ -43,7 +46,7 @@ def init_lora():
     reset_lora()
     
     spi_write(0x01, 0x81)  # LoRa 모드 설정 (Long Range Mode)
-    spi_write(0x06, 0x6C)  # 주파수 설정 (915MHz 기준)
+    spi_write(0x06, 0x6C)  # 주파수 설정 (915MHz)
     spi_write(0x07, 0x80)
     spi_write(0x08, 0x00)
     
@@ -75,20 +78,20 @@ def receive_packet():
             payload.append(spi_read(0x00))  # FIFO에서 데이터 읽기
         
         rssi = spi_read(0x1A) - 157  # RSSI 계산
-        print(f"수신된 데이터: {bytes(payload).decode('utf-8', 'ignore')} | 신호 강도: {rssi} dBm")
+        print(f"Received data: {bytes(payload).decode('utf-8', 'ignore')} | signal strength: {rssi} dBm")
 
 # 메인 실행 루프
 if __name__ == "__main__":
     try:
         init_lora()
-        print("LoRa 수신기 시작...")
-        
+        print("Starting the LoRa receiver...")
+
         while True:
             receive_packet()
             time.sleep(0.5)
     
     except KeyboardInterrupt:
-        print("\n종료 중...")
+        print("\n Ending...")
         GPIO.cleanup()
         spi.close()
-        print("LoRa 종료 완료")
+        print("LoRa End Complete")

@@ -1,97 +1,39 @@
-import spidev
-import RPi.GPIO as GPIO
-import time
+from time import sleep
+from SX127x.LoRa import *
+from SX127x.board_config import BOARD
 
-# 📡 LoRa 모듈 핀 설정
-LORA_RST = 25  # LoRa 리셋 핀 (GPIO25)
-LORA_CS = 8    # LoRa 칩 선택 핀 (GPIO8)
-LORA_IRQ = 4   # LoRa 수신 인터럽트 핀 (GPIO4)
+# SPI 핀 초기화
+BOARD.setup()
 
-# LoRa 주파수 (아두이노 송신기와 동일해야 함)
-LORA_FREQ = 915.0  
+class LoRaRcvCont(LoRa):
+    def __init__(self, verbose=False):
+        super(LoRaRcvCont, self).__init__(verbose)
+        self.set_mode(MODE.SLEEP)
+        self.set_dio_mapping([0] * 6)
 
-# SPI 인터페이스 설정
-spi = spidev.SpiDev()
-spi.open(0, 0)  # SPI 버스 0, 장치 0 (CE0)
-spi.max_speed_hz = 5000000  # 최대 속도 5MHz
-
-# GPIO 설정
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(LORA_RST, GPIO.OUT)
-GPIO.setup(LORA_CS, GPIO.OUT)
-GPIO.setup(LORA_IRQ, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-
-# LoRa 모듈 리셋 함수
-def reset_lora():
-    GPIO.output(LORA_RST, GPIO.LOW)
-    time.sleep(0.01)
-    GPIO.output(LORA_RST, GPIO.HIGH)
-    time.sleep(0.01)
-
-# SPI를 통해 SX127x 레지스터 읽기 함수
-def spi_read(register):
-    GPIO.output(LORA_CS, GPIO.LOW)
-    response = spi.xfer2([register & 0x7F, 0x00])  # 첫 바이트는 읽기, 두 번째는 응답값 받기
-    GPIO.output(LORA_CS, GPIO.HIGH)
-    return response[1]
-
-# SPI를 통해 SX127x 레지스터 쓰기 함수
-def spi_write(register, value):
-    GPIO.output(LORA_CS, GPIO.LOW)
-    spi.xfer2([register | 0x80, value])
-    GPIO.output(LORA_CS, GPIO.HIGH)
-
-# LoRa 초기화 함수
-def init_lora():
-    reset_lora()
+    def start(self):
+        self.set_freq(915.0)  # 주파수 설정
+        self.set_pa_config(pa_select=1)
+        self.set_spreading_factor(7)
+        self.set_bw(7)  # Bandwidth 설정 (7=125kHz)
+        self.set_coding_rate(4)
+        self.set_preamble(8)
+        self.set_mode(MODE.RXCONT)  # 수신 모드로 설정
+        print("LoRa Receiver started...")
     
-    spi_write(0x01, 0x81)  # LoRa 모드 설정 (Long Range Mode)
-    spi_write(0x06, 0x6C)  # 주파수 설정 (915MHz)
-    spi_write(0x07, 0x80)
-    spi_write(0x08, 0x00)
-    
-    spi_write(0x1D, 0x72)  # 대역폭(BW), 확산인자(SF), 부호화율(CR) 설정
-    spi_write(0x1E, 0x74)  
-    spi_write(0x26, 0x04)  # LowDataRateOptimize 활성화
-    
-    spi_write(0x20, 0x00)  # 프리앰블 길이 설정
-    spi_write(0x21, 0x08)
-    
-    spi_write(0x22, 0x40)  # 패킷 최대 길이
-    spi_write(0x40, 0x00)  # 비트 동기화 설정
-    
-    spi_write(0x0D, 0x00)  # FIFO 포인터 리셋
-    spi_write(0x0E, 0x00)
-    
-    spi_write(0x01, 0x85)  # 수신 모드 활성화 (RX Continuous Mode)
+    def on_rx_done(self):
+        self.set_mode(MODE.STDBY)
+        print("\nReceived message: {}".format(self.read_payload(nocheck=True)))
+        self.set_mode(MODE.RXCONT)  # 계속 수신하도록 설정
 
-# 수신 데이터 읽기
-def receive_packet():
-    if GPIO.input(LORA_IRQ) == GPIO.HIGH:
-        spi_write(0x12, 0xFF)  # IRQ 클리어
-        packet_size = spi_read(0x13)  # 패킷 크기 읽기
-        fifo_addr = spi_read(0x10)  # FIFO 시작 주소 읽기
-        spi_write(0x0D, fifo_addr)  # FIFO 포인터 설정
-        
-        payload = []
-        for _ in range(packet_size):
-            payload.append(spi_read(0x00))  # FIFO에서 데이터 읽기
-        
-        rssi = spi_read(0x1A) - 157  # RSSI 계산
-        print(f"Received data: {bytes(payload).decode('utf-8', 'ignore')} | signal strength: {rssi} dBm")
+try:
+    lora = LoRaRcvCont(verbose=False)
+    lora.start()
 
-# 메인 실행 루프
-if __name__ == "__main__":
-    try:
-        init_lora()
-        print("Starting the LoRa receiver...")
-
-        while True:
-            receive_packet()
-            time.sleep(0.5)
-    
-    except KeyboardInterrupt:
-        print("\n Ending...")
-        GPIO.cleanup()
-        spi.close()
-        print("LoRa End Complete")
+    while True:
+        sleep(1)  # 계속 루프 돌면서 데이터 수신 대기
+except KeyboardInterrupt:
+    print("Program interrupted by user")
+finally:
+    lora.set_mode(MODE.SLEEP)
+    BOARD.teardown()

@@ -2,7 +2,7 @@ from time import sleep
 from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
 
-# GPIO 핀 구성 초기화
+# GPIO 초기화
 BOARD.setup()
 
 class LoRaReceiver(LoRa):
@@ -18,24 +18,24 @@ class LoRaReceiver(LoRa):
         self.set_bw(7)  # Bandwidth 설정 (125 kHz)
         self.set_coding_rate(5)  # Coding Rate 설정 (4/5)
         self.set_preamble(8)  # Preamble 길이 설정
-        self.set_mode(MODE.RXCONT)  # Continuous RX 모드 설정
+        self.set_mode(MODE.RXCONT)  # RX 모드로 설정
         print("LoRa Receiver is started and waiting for incoming data...")
 
     def on_rx_done(self):
         self.set_mode(MODE.STDBY)
         payload = self.read_payload(nocheck=True)
         print(f"Received data: {payload.decode('utf-8')}")
-        self.set_mode(MODE.RXCONT)  # 다시 수신 모드로 설정
+        self.set_mode(MODE.RXCONT)  # RX 모드로 다시 설정
 
-# LoRaReceiver 객체 생성
+# LoRaReceiver 인스턴스 생성
 try:
-    lora = LoRaReceiver(verbose=False)
-    lora.start()
+    lora_receiver = LoRaReceiver(verbose=False)  # 객체 이름을 명확히 정의
+    lora_receiver.start()
 
     while True:
-        sleep(1)  # 계속 대기하면서 데이터를 수신
+        sleep(1)  # 계속 데이터를 대기
 except KeyboardInterrupt:
     print("Program interrupted by user.")
 finally:
-    lora.set_mode(MODE.SLEEP)
+    lora_receiver.set_mode(MODE.SLEEP)  # 종료 시 수신 모드 해제
     BOARD.teardown()

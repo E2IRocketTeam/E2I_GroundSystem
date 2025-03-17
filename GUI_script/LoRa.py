@@ -1,5 +1,5 @@
 from time import sleep
-from SX127x.LoRa import LoRa
+from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
 
 # Raspberry Pi 핀 구성 초기화
@@ -27,6 +27,7 @@ class LoRaReceiver(LoRa):
         print(f"Received data: {payload.decode('utf-8')}")
         self.set_mode(MODE.RXCONT)  # 다시 수신 모드로 설정
 
+# LoRaReceiver 객체 생성
 try:
     lora = LoRaReceiver(verbose=False)
     lora.start()

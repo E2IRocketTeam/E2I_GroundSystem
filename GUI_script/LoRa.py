@@ -29,13 +29,13 @@ class LoRaReceiver(LoRa):
 
 # LoRaReceiver 인스턴스 생성
 try:
-    lora_receiver = LoRaReceiver(verbose=False)  # 객체 이름을 명확히 정의
-    lora_receiver.start()
+    a = LoRaReceiver(verbose=False)  # 객체 이름을 명확히 정의
+    a.start()
 
     while True:
         sleep(1)  # 계속 데이터를 대기
 except KeyboardInterrupt:
     print("Program interrupted by user.")
 finally:
-    lora_receiver.set_mode(MODE.SLEEP)  # 종료 시 수신 모드 해제
+    a.set_mode(MODE.SLEEP)  # 종료 시 수신 모드 해제
     BOARD.teardown()

@@ -1,41 +1,29 @@
 from time import sleep
-from SX127x.LoRa import LoRa, MODE
-from SX127x.board_config import BOARD
+from pyLoRaRFM9x import LoRa
 
-# GPIO 초기화
-BOARD.setup()
+# 핀 설정
+CS_PIN = 8  # SPI CS 핀 (BCM 번호, GPIO8)
+RESET_PIN = 25  # 리셋 핀 (BCM 번호, GPIO25)
 
-class LoRaReceiver(LoRa):
-    def __init__(self, verbose=False):
-        super(LoRaReceiver, self).__init__(verbose)
-        self.set_mode(MODE.SLEEP)
-        self.set_dio_mapping([0] * 6)
+# LoRa 설정
+FREQUENCY = 915.0  # 주파수 (MHz)
+TX_POWER = 23  # 송신 출력 (dBm)
 
-    def start(self):
-        self.set_freq(915.0)  # 주파수 설정 (915 MHz)
-        self.set_pa_config(pa_select=1)
-        self.set_spreading_factor(7)  # Spreading Factor 설정
-        self.set_bw(7)  # Bandwidth 설정 (125 kHz)
-        self.set_coding_rate(5)  # Coding Rate 설정 (4/5)
-        self.set_preamble(8)  # Preamble 길이 설정
-        self.set_mode(MODE.RXCONT)  # RX 모드로 설정
-        print("LoRa Receiver is started and waiting for incoming data...")
+# LoRa 객체 생성
+lora = LoRa(bcm_pin_cs=CS_PIN, bcm_pin_reset=RESET_PIN, frequency=FREQUENCY, tx_power=TX_POWER)
 
-    def on_rx_done(self):
-        self.set_mode(MODE.STDBY)
-        payload = self.read_payload(nocheck=True)
-        print(f"Received data: {payload.decode('utf-8')}")
-        self.set_mode(MODE.RXCONT)  # RX 모드로 다시 설정
+def receive_data():
+    print("LoRa Receiver is started and waiting for data...")
+    try:
+        while True:
+            if lora.received_packet():  # 패킷 수신 여부 확인
+                payload = lora.read_payload()  # 수신 데이터 읽기
+                print(f"Received: {payload.decode('utf-8')}")
+            sleep(0.1)  # 루프 지연
+    except KeyboardInterrupt:
+        print("Program interrupted by user.")
+    finally:
+        lora.close()  # LoRa 객체 종료
 
-# LoRaReceiver 객체 생성
-try:
-    lora = LoRaReceiver(verbose=False)  # 객체 이름을 명확히 정의
-    lora.start()
-
-    while True:
-        sleep(1)  # 계속 데이터를 대기
-except KeyboardInterrupt:
-    print("Program interrupted by user.")
-finally:
-    lora.set_mode(MODE.SLEEP)  # 종료 시 수신 모드 해제
-    BOARD.teardown()
+if __name__ == "__main__":
+    receive_data()

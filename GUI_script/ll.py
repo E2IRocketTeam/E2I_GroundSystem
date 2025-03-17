@@ -27,15 +27,15 @@ class LoRaReceiver(LoRa):
         print(f"Received data: {payload.decode('utf-8')}")
         self.set_mode(MODE.RXCONT)  # RX 모드로 다시 설정
 
-# LoRaReceiver 인스턴스 생성
+# LoRaReceiver 객체 생성
 try:
-    a = LoRaReceiver(verbose=False)  # 객체 이름을 명확히 정의
-    a.start()
+    lora = LoRaReceiver(verbose=False)  # 객체 이름을 명확히 정의
+    lora.start()
 
     while True:
         sleep(1)  # 계속 데이터를 대기
 except KeyboardInterrupt:
     print("Program interrupted by user.")
 finally:
-    a.set_mode(MODE.SLEEP)  # 종료 시 수신 모드 해제
+    lora.set_mode(MODE.SLEEP)  # 종료 시 수신 모드 해제
     BOARD.teardown()
